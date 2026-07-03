@@ -1,6 +1,6 @@
 # Point a LangChain agent at the EU-deployed SecureVector engine.
 # The adapter is self-contained; drop --no-deps if langchain is already present.
-securevector-sdk-langchain>=1.1.0
-langchain>=1.0
+securevector-sdk-langchain>=1.1.0,<2
+langchain>=1.0,<2
 # Optional: only needed to run the agent against a real model in the demo.
-langchain-openai>=0.2
+langchain-openai>=0.2,<1

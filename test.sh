@@ -21,6 +21,10 @@ set -euo pipefail
 REGION="${REGION:-eu-west-1}"
 TF_DIR="$(cd "$(dirname "$0")/terraform" && pwd)"
 TOKEN="$(openssl rand -hex 24)"
+# Pass secrets to Terraform via TF_VAR_* env, not -var on the CLI, so the token
+# never appears in the process list (ps/argv) on a shared host.
+export TF_VAR_region="$REGION"
+export TF_VAR_ingress_token="$TOKEN"
 PASS=0; FAIL=0
 say()  { printf '\n\033[1;36m== %s ==\033[0m\n' "$*"; }
 ok()   { printf '  \033[32m✓ %s\033[0m\n' "$*"; PASS=$((PASS+1)); }
@@ -28,11 +32,11 @@ bad()  { printf '  \033[31m✗ %s\033[0m\n' "$*"; FAIL=$((FAIL+1)); }
 
 cleanup() {
   if [ "${KEEP:-0}" = "1" ]; then
-    say "KEEP=1 — leaving the deployment up. Destroy later with:  (cd $TF_DIR && terraform destroy -var=ingress_token=…)"
+    say "KEEP=1 — leaving the deployment up. Destroy later with:  (cd $TF_DIR && TF_VAR_ingress_token=… terraform destroy)"
     return
   fi
   say "Tearing down (terraform destroy)"
-  terraform -chdir="$TF_DIR" destroy -auto-approve -var="region=$REGION" -var="ingress_token=$TOKEN" >/dev/null 2>&1 \
+  terraform -chdir="$TF_DIR" destroy -auto-approve >/dev/null 2>&1 \
     && echo "  destroyed" || echo "  ⚠ destroy failed — check the AWS console for leftover resources"
 }
 trap cleanup EXIT
@@ -41,7 +45,7 @@ for bin in terraform curl python3 openssl; do command -v "$bin" >/dev/null || { 
 
 say "Deploy — region=$REGION, engine=:4.9.0, ingress auth ON, SV_DATA_RESIDENCY=eu"
 terraform -chdir="$TF_DIR" init -input=false >/dev/null
-terraform -chdir="$TF_DIR" apply -auto-approve -input=false -var="region=$REGION" -var="ingress_token=$TOKEN"
+terraform -chdir="$TF_DIR" apply -auto-approve -input=false
 
 BASE="$(terraform -chdir="$TF_DIR" output -raw dashboard_url)"
 BASE="${BASE%/}"
