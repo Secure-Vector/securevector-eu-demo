@@ -19,6 +19,14 @@ path: agents point at a self-hosted, in-region engine via
 - Terraform ≥ 1.5, AWS credentials (env vars or a profile), `curl`, `python3`, `openssl`.
 - AWS will bill for the Fargate task + ALB while it's up (minutes). The harness destroys everything on exit.
 
+> **⚠️ This is a test harness, not a production template.** By default it deploys an
+> **internet-facing HTTP** ALB in the **default VPC** — so a bearer token travels in
+> cleartext, and a bare `terraform apply` with **no `ingress_token`** leaves the
+> `/analyze` endpoint **open to the internet**. `test.sh` always sets a strong per-run
+> token and tears everything down on exit. For anything long-lived: pass a token,
+> terminate TLS (ACM/HTTPS) or use an internal ALB / PrivateLink, and deploy into a
+> private VPC. The module ref is pinned to an immutable commit for reproducibility.
+
 ## Run
 
 ```bash

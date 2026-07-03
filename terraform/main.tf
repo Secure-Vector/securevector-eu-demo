@@ -46,17 +46,24 @@ provider "aws" {
 }
 
 module "securevector" {
-  source = "github.com/Secure-Vector/terraform-aws-securevector?ref=main"
+  # Pinned to an immutable commit (the v4.9 / #190 unified-endpoint release of the
+  # module) for reproducible, supply-chain-safe deploys. Bump deliberately.
+  source = "github.com/Secure-Vector/terraform-aws-securevector?ref=bcab32b3c836f3142150b7cfb33a85d7d685eb3a"
 
   name                 = "sv-eu-test"
   image                = var.engine_image
   securevector_runtime = "langchain" # emits a copy-paste client snippet as output
 
-  # Cheapest test posture: single task, default VPC/subnets, public HTTP.
+  # Cheapest TEST posture: single task, default VPC/public subnets, internet-facing
+  # HTTP (no TLS). Fine for this deploy→validate→destroy harness, NOT for anything
+  # long-lived: a bearer token over plain HTTP is exposed in transit. For real use,
+  # front the ALB with ACM/HTTPS (or an internal ALB / PrivateLink) and a private VPC.
   min_instances = 1
   max_instances = 1
 
-  # Optional inbound auth — when set, every client must forward the token.
+  # Inbound auth. test.sh always sets a strong per-run token. NOTE: the var defaults
+  # to "" — a bare `terraform apply` with no -var deploys an OPEN internet-facing
+  # /analyze endpoint. Always pass a token (see the header) unless you intend that.
   ingress_token = var.ingress_token
 
   # EU data residency: keep ALL prompt analysis local even with Cloud Mode on
